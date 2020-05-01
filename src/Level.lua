@@ -73,7 +73,7 @@ function Level:init()
             if a:getUserData() == 'Player' then
                 local velX, velY = a:getBody():getLinearVelocity()
                 local sumVel = math.abs(velX) + math.abs(velY)
-                
+
                 if sumVel > 20 then
                     table.insert(self.destroyedBodies, b:getBody())
                 end
@@ -97,7 +97,7 @@ function Level:init()
     -- the remaining three functions here are sample definitions, but we are not
     -- implementing any functionality with them in this demo; use-case specific
     function endContact(a, b, coll)
-        
+
     end
 
     function preSolve(a, b, coll)
@@ -153,7 +153,7 @@ function Level:update(dt)
 
     -- destroy all bodies we calculated to destroy during the update call
     for k, body in pairs(self.destroyedBodies) do
-        if not body:isDestroyed() then 
+        if not body:isDestroyed() then
             body:destroy()
         end
     end
@@ -184,18 +184,46 @@ function Level:update(dt)
 
     -- replace launch marker if original alien stopped moving
     if self.launchMarker.launched then
-        local xPos, yPos = self.launchMarker.alien.body:getPosition()
-        local xVel, yVel = self.launchMarker.alien.body:getLinearVelocity()
-        
-        -- if we fired our alien to the left or it's almost done rolling, respawn
-        if xPos < 0 or (math.abs(xVel) + math.abs(yVel) < 1.5) then
-            self.launchMarker.alien.body:destroy()
-            self.launchMarker = AlienLaunchMarker(self.world)
+        if not self.launchMarker.playerHasSplit then
+            local xPos, yPos = self.launchMarker.alien.body:getPosition()
+            local xVel, yVel = self.launchMarker.alien.body:getLinearVelocity()
 
-            -- re-initialize level if we have no more aliens
-            if #self.aliens == 0 then
-                gStateMachine:change('start')
+            -- if we fired our alien to the left or it's almost done rolling, respawn
+            if xPos < 0 or (math.abs(xVel) + math.abs(yVel) < 1.5) then
+                self.launchMarker.alien.body:destroy()
+                self.launchMarker = AlienLaunchMarker(self.world)
+
+                -- re-initialize level if we have no more aliens
+                if #self.aliens == 0 then
+                    gStateMachine:change('start')
+                end
             end
+            if love.keyboard.wasPressed('space') and not self.launchMarkerplayerHasCollided then
+                self.launchMarker:splitAlien()
+            end
+        else
+            for k, alien in pairs(self.launchMarker.alien) do
+                local xPos, yPos = alien.body:getPosition()
+                local xVel, yVel = alien.body:getLinearVelocity()
+
+                -- if we fired our alien to the left or it's almost done rolling, respawn
+                if xPos < 0 or (math.abs(xVel) + math.abs(yVel) < 1.5) then
+                    alien.body:destroy()
+                    table.remove(self.launchMarker.alien, k)
+                end
+            end
+
+            --reset the launcher
+            if #self.launchMarker.alien == 0 then
+                self.launchMarker.alien = nil
+                self.launchMarker = AlienLaunchMarker(self.world)
+
+                -- re-initialize level if we have no more aliens
+                if #self.aliens == 0 then
+                    gStateMachine:change('start')
+                end
+            end
+
         end
     end
 end

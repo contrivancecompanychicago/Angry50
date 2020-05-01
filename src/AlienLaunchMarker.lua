@@ -30,6 +30,10 @@ function AlienLaunchMarker:init(world)
 
     -- our alien we will eventually spawn
     self.alien = nil
+
+    -- for splitting the alien
+    self.playerHasCollided = false
+    self.playerHasSplit = false
 end
 
 function AlienLaunchMarker:update(dt)
@@ -66,11 +70,6 @@ function AlienLaunchMarker:update(dt)
             self.rotation = self.baseY - self.shiftedY * 0.9
             self.shiftedX = math.min(self.baseX + 30, math.max(x, self.baseX - 30))
             self.shiftedY = math.min(self.baseY + 30, math.max(y, self.baseY - 30))
-        end
-    -- alien is launched
-    else
-        if love.keyboard.wasPressed('space') then
-            print("User pressed space during launch")
         end
     end
 end
@@ -111,6 +110,47 @@ function AlienLaunchMarker:render()
 
         love.graphics.setColor(255, 255, 255, 255)
     else
-        self.alien:render()
+        if self.playerHasSplit then
+            for k, alien in pairs(self.alien) do
+                alien:render()
+            end
+        else
+            self.alien:render()
+        end
     end
+end
+
+function AlienLaunchMarker:splitAlien()
+    --get data from alien to split
+    local originalX = self.alien.body:getX()
+    local originalY = self.alien.body:getY()
+
+    -- create and add the new Aliens
+    topAlien = Alien(self.world, 'round', originalX, originalY - 35/2, 'Player')
+    topAlien.body:setLinearVelocity(self.alien.body:getLinearVelocity())
+    topAlien.fixture:setRestitution(0.4)
+    topAlien.body:setAngularDamping(1)
+
+
+    middleAlien = Alien(self.world, 'round', originalX, originalY, 'Player')
+    middleAlien.body:setLinearVelocity(self.alien.body:getLinearVelocity())
+    middleAlien.fixture:setRestitution(0.4)
+    middleAlien.body:setAngularDamping(1)
+
+
+    bottomAlien = Alien(self.world, 'round', originalX, originalY + 35/2, 'Player')
+    bottomAlien.body:setLinearVelocity(self.alien.body:getLinearVelocity())
+    bottomAlien.fixture:setRestitution(0.4)
+    bottomAlien.body:setAngularDamping(1)
+
+
+    self.alien.body:destroy()
+    -- alien is now a table of Aliens!
+    self.alien = {}
+
+    table.insert(self.alien, topAlien)
+    table.insert(self.alien, middleAlien)
+    table.insert(self.alien, bottomAlien)
+
+    self.playerHasSplit = true
 end
